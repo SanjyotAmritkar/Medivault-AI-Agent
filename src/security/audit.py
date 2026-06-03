@@ -3,9 +3,10 @@ Audit Logging Module
 Implements comprehensive audit logging for HIPAA compliance.
 """
 
+import os
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any
 from enum import Enum
@@ -56,16 +57,23 @@ class AuditLogger:
         # Setup file handler for audit log
         self.logger = logging.getLogger("audit")
         self.logger.setLevel(logging.INFO)
-        
-        # Create file handler
-        handler = logging.FileHandler(self.log_file)
-        handler.setLevel(logging.INFO)
-        
-        # Format: JSON for structured logging
-        formatter = logging.Formatter('%(message)s')
-        handler.setFormatter(formatter)
-        
-        self.logger.addHandler(handler)
+
+        # Keep audit records out of the root logger / console. Without this,
+        # logging.basicConfig() elsewhere causes every audit event (including
+        # PHI-bearing resource names) to leak to stderr and be duplicated.
+        self.logger.propagate = False
+
+        # Avoid attaching duplicate handlers if the logger is reconfigured.
+        if not any(isinstance(h, logging.FileHandler) for h in self.logger.handlers):
+            # Create file handler
+            handler = logging.FileHandler(self.log_file)
+            handler.setLevel(logging.INFO)
+
+            # Format: JSON for structured logging
+            formatter = logging.Formatter('%(message)s')
+            handler.setFormatter(formatter)
+
+            self.logger.addHandler(handler)
     
     def log_event(
         self,
@@ -88,7 +96,7 @@ class AuditLogger:
             metadata: Additional context
         """
         event = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event_type": event_type.value,
             "user_id": user_id,
             "resource": resource,
@@ -180,10 +188,6 @@ class AuditLogger:
             result=result,
             metadata=metadata
         )
-
-
-# Import os for environment variable
-import os
 
 
 # Global audit logger instance

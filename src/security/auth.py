@@ -3,11 +3,15 @@ Authentication and Authorization Module
 Simple role-based access control for local deployment.
 """
 
+import os
 import hashlib
+import logging
 import secrets
 from typing import Optional, List, Dict
 from enum import Enum
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 class Role(str, Enum):
@@ -48,9 +52,28 @@ class AuthManager:
         self._create_default_user()
     
     def _create_default_user(self):
-        """Create default admin user"""
-        # Default: sanjyot_sbu123/sanjyot@120525
-        self.create_user("sanjyot_sbu123", "sanjyot@120525", [Role.ADMIN])
+        """
+        Create the default admin user from environment variables.
+
+        Credentials are read from ADMIN_USERNAME / ADMIN_PASSWORD so that no
+        secret is ever committed to source control. If ADMIN_PASSWORD is not
+        set, a random one-time password is generated and logged to the console
+        for first-time setup.
+        """
+        username = os.getenv("ADMIN_USERNAME", "admin")
+        password = os.getenv("ADMIN_PASSWORD")
+
+        if not password:
+            password = secrets.token_urlsafe(16)
+            logger.warning(
+                "ADMIN_PASSWORD not set; generated a temporary admin password "
+                "for user '%s': %s  (set ADMIN_USERNAME/ADMIN_PASSWORD in your "
+                "environment to override).",
+                username,
+                password,
+            )
+
+        self.create_user(username, password, [Role.ADMIN])
     
     def hash_password(self, password: str) -> str:
         """Hash password with salt"""

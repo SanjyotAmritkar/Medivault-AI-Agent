@@ -166,10 +166,16 @@ def login_page():
                 
                 st.error("Invalid credentials")
         
-        with st.expander("ℹ️ Default Credentials"):
-            st.write("Username: `sanjyot_sbu123`")
-            st.write("Password: `sanjyot@120525`")
-            st.warning("**Change default credentials in production!**")
+        with st.expander("ℹ️ First-time setup"):
+            st.write(
+                "Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your environment "
+                "(or `.env`) before starting the app."
+            )
+            st.write(
+                "If `ADMIN_PASSWORD` is unset, a one-time random password is "
+                "generated and printed to the server console on startup."
+            )
+            st.warning("**Never commit credentials to source control.**")
 
 
 def sidebar():
